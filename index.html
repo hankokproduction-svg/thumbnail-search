@@ -138,7 +138,6 @@
         }
         .search-input-container {
             position: relative;
-            margin-bottom: 1.5rem;
         }
         .search-input {
             width: 100%;
@@ -231,7 +230,6 @@
             border-radius: 12px;
             overflow: hidden;
             transition: all 0.3s ease;
-            position: relative;
         }
         .thumbnail-card:hover {
             transform: translateY(-4px);
@@ -407,7 +405,7 @@
             <div class="logo">Thumbnail Intelligence</div>
             <div class="stats">
                 <div class="stat-item">
-                    <span class="stat-value" id="totalCount">1,195</span>
+                    <span class="stat-value" id="totalCount">—</span>
                     <span>Thumbnails</span>
                 </div>
             </div>
@@ -493,9 +491,13 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
-        const API_URL = 'https://lyurffrxiposcfznecgb.supabase.co/functions/v1/smart-handler';
-        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dXJmZnJ4aXBvc2Nmem5lY2diIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgzNTM2MjMsImV4cCI6MjA1MzkyOTYyM30.TVQX5uYhKXgvX9_OaSuOsjrZvZXZ7Vz-l_xNYn1H2y8';
+        const { createClient } = supabase;
+        const sb = createClient(
+            'https://lyurffrxiposcfznecgb.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dXJmZnJ4aXBvc2Nmem5lY2diIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDMzMjYwMiwiZXhwIjoyMDg1OTA4NjAyfQ.8ZzLkD_jsutBx0cMAftpwDF0mQjZFK44KbpslCf7lvc'
+        );
 
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', function() {
@@ -512,23 +514,16 @@
         document.getElementById('searchInput').addEventListener('keypress', e => { if (e.key === 'Enter') performSearch(); });
         document.getElementById('semanticInput').addEventListener('keypress', e => { if (e.key === 'Enter') performSemanticSearch(); });
 
-        async function callAPI(body) {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${ANON_KEY}`
-                },
-                body: JSON.stringify(body)
-            });
-            return await response.json();
+        async function loadStats() {
+            const { count } = await sb.from('thumbnails').select('*', { count: 'exact', head: true });
+            document.getElementById('totalCount').textContent = count?.toLocaleString() || '—';
         }
 
         async function performSearch() {
             const query = document.getElementById('searchInput').value.trim();
             if (!query) return showError('Please enter a search query');
             showLoading();
-            const { data } = await callAPI({ mode: 'text', query });
+            const { data } = await sb.from('thumbnails').select('*').or(`video_title.ilike.%${query}%,description.ilike.%${query}%`).limit(50);
             displayResults(data || []);
         }
 
@@ -538,10 +533,11 @@
             const category = document.getElementById('categoryFilter').value;
             if (!style && !angle && !category) return showError('Please select at least one filter');
             showLoading();
-            const { data } = await callAPI({ 
-                mode: 'filters', 
-                filters: { style, angle, category }
-            });
+            let query = sb.from('thumbnails').select('*');
+            if (style) query = query.eq('stil', style);
+            if (angle) query = query.eq('rakurs', angle);
+            if (category) query = query.contains('tematika', [category]);
+            const { data } = await query.limit(50);
             displayResults(data || []);
         }
 
@@ -549,7 +545,7 @@
             const query = document.getElementById('semanticInput').value.trim();
             if (!query) return showError('Please enter a search query');
             showLoading();
-            const { data } = await callAPI({ mode: 'text', query });
+            const { data } = await sb.from('thumbnails').select('*').or(`description.ilike.%${query}%`).limit(50);
             displayResults(data || []);
         }
 
@@ -618,6 +614,8 @@
         document.getElementById('imageModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
+
+        loadStats();
     </script>
 </body>
 </html>
