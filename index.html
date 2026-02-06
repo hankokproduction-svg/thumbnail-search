@@ -231,18 +231,61 @@
             border-radius: 12px;
             overflow: hidden;
             transition: all 0.3s ease;
-            cursor: pointer;
+            position: relative;
         }
         .thumbnail-card:hover {
             transform: translateY(-4px);
             border-color: var(--accent);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
-        .thumbnail-image {
+        .thumbnail-image-wrapper {
+            position: relative;
             width: 100%;
             aspect-ratio: 16/9;
+            overflow: hidden;
+        }
+        .thumbnail-image {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
             background: var(--bg-tertiary);
+        }
+        .thumbnail-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .thumbnail-card:hover .thumbnail-actions {
+            opacity: 1;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+        .action-btn:hover {
+            background: rgba(59, 130, 246, 0.8);
+            border-color: var(--accent);
         }
         .thumbnail-content {
             padding: 1.25rem;
@@ -312,6 +355,44 @@
             margin-bottom: 1rem;
             opacity: 0.3;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            padding: 2rem;
+        }
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            position: relative;
+        }
+        .modal-image {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 8px;
+        }
+        .modal-close {
+            position: absolute;
+            top: -2.5rem;
+            right: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
         @media (max-width: 768px) {
             h1 { font-size: 2.5rem; }
             .subtitle { font-size: 1rem; }
@@ -326,7 +407,7 @@
             <div class="logo">Thumbnail Intelligence</div>
             <div class="stats">
                 <div class="stat-item">
-                    <span class="stat-value" id="totalCount">—</span>
+                    <span class="stat-value" id="totalCount">1,195</span>
                     <span>Thumbnails</span>
                 </div>
             </div>
@@ -342,7 +423,7 @@
         <div class="search-container">
             <div class="search-tabs">
                 <button class="tab active" data-mode="text">Text Search</button>
-                <button class="tab" data-mode="filters">Advanced Filters</button>
+                <button class="tab" data-mode="filters">AI Filters</button>
                 <button class="tab" data-mode="semantic">Semantic Search</button>
             </div>
 
@@ -359,26 +440,26 @@
                         <label class="filter-label">Style</label>
                         <select id="styleFilter">
                             <option value="">All Styles</option>
-                            <option value="mrbeast">MrBeast</option>
-                            <option value="реализм">Реализм</option>
+                            <option value="mrbeast">MrBeast Style</option>
+                            <option value="реализм">Realistic</option>
                         </select>
                     </div>
                     <div class="filter-group">
-                        <label class="filter-label">Angle</label>
+                        <label class="filter-label">Camera Angle</label>
                         <select id="angleFilter">
                             <option value="">All Angles</option>
-                            <option value="крупный_план">Крупный план</option>
-                            <option value="средний_план">Средний план</option>
-                            <option value="прямо">Прямо</option>
+                            <option value="крупный_план">Close-up</option>
+                            <option value="средний_план">Medium Shot</option>
+                            <option value="прямо">Straight</option>
                         </select>
                     </div>
                     <div class="filter-group">
                         <label class="filter-label">Category</label>
                         <select id="categoryFilter">
                             <option value="">All Categories</option>
-                            <option value="челлендж">Челлендж</option>
-                            <option value="путешествия">Путешествия</option>
-                            <option value="обзор">Обзор</option>
+                            <option value="челлендж">Challenge</option>
+                            <option value="путешествия">Travel</option>
+                            <option value="обзор">Review</option>
                         </select>
                     </div>
                 </div>
@@ -405,13 +486,16 @@
         </div>
     </main>
 
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <img class="modal-image" id="modalImage" src="" alt="">
+        </div>
+    </div>
+
     <script>
-        const { createClient } = supabase;
-        const sb = createClient(
-            'https://lyurffrxiposcfznecgb.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dXJmZnJ4aXBvc2Nmem5lY2diIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDMzMjYwMiwiZXhwIjoyMDg1OTA4NjAyfQ.8ZzLkD_jsutBx0cMAftpwDF0mQjZFK44KbpslCf7lvc'
-        );
+        const API_URL = 'https://lyurffrxiposcfznecgb.supabase.co/functions/v1/smart-handler';
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5dXJmZnJ4aXBvc2Nmem5lY2diIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgzNTM2MjMsImV4cCI6MjA1MzkyOTYyM30.TVQX5uYhKXgvX9_OaSuOsjrZvZXZ7Vz-l_xNYn1H2y8';
 
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', function() {
@@ -428,17 +512,24 @@
         document.getElementById('searchInput').addEventListener('keypress', e => { if (e.key === 'Enter') performSearch(); });
         document.getElementById('semanticInput').addEventListener('keypress', e => { if (e.key === 'Enter') performSemanticSearch(); });
 
-        async function loadStats() {
-            const { count } = await sb.from('thumbnails').select('*', { count: 'exact', head: true });
-            document.getElementById('totalCount').textContent = count?.toLocaleString() || '—';
+        async function callAPI(body) {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${ANON_KEY}`
+                },
+                body: JSON.stringify(body)
+            });
+            return await response.json();
         }
 
         async function performSearch() {
             const query = document.getElementById('searchInput').value.trim();
             if (!query) return showError('Please enter a search query');
             showLoading();
-            const { data } = await sb.from('thumbnails').select('*').or(`video_title.ilike.%${query}%,description.ilike.%${query}%`).limit(50);
-            displayResults(data);
+            const { data } = await callAPI({ mode: 'text', query });
+            displayResults(data || []);
         }
 
         async function performFilterSearch() {
@@ -447,20 +538,19 @@
             const category = document.getElementById('categoryFilter').value;
             if (!style && !angle && !category) return showError('Please select at least one filter');
             showLoading();
-            let query = sb.from('thumbnails').select('*');
-            if (style) query = query.eq('stil', style);
-            if (angle) query = query.eq('rakurs', angle);
-            if (category) query = query.contains('tematika', [category]);
-            const { data } = await query.limit(50);
-            displayResults(data);
+            const { data } = await callAPI({ 
+                mode: 'filters', 
+                filters: { style, angle, category }
+            });
+            displayResults(data || []);
         }
 
         async function performSemanticSearch() {
             const query = document.getElementById('semanticInput').value.trim();
             if (!query) return showError('Please enter a search query');
             showLoading();
-            const { data } = await sb.from('thumbnails').select('*').or(`description.ilike.%${query}%,video_title.ilike.%${query}%`).limit(50);
-            displayResults(data);
+            const { data } = await callAPI({ mode: 'text', query });
+            displayResults(data || []);
         }
 
         function displayResults(data) {
@@ -470,15 +560,22 @@
                 return;
             }
             document.getElementById('resultsContainer').innerHTML = `<div class="results-grid">${data.map(item => `
-                <div class="thumbnail-card" onclick="window.open('https://youtube.com/watch?v=${item.video_id}', '_blank')">
-                    <img src="${item.file_url}" alt="${item.video_title}" class="thumbnail-image" loading="lazy">
-                    <div class="thumbnail-content">
-                        <div class="thumbnail-title">${item.video_title}</div>
-                        <div class="thumbnail-meta">
-                            <span class="meta-tag style">${item.stil}</span>
-                            <span class="meta-tag">${item.rakurs}</span>
+                <div class="thumbnail-card">
+                    <div class="thumbnail-image-wrapper">
+                        <img src="${item.file_url}" alt="${escapeHtml(item.video_title)}" class="thumbnail-image" loading="lazy">
+                        <div class="thumbnail-actions">
+                            <a href="https://youtube.com/watch?v=${item.video_id}" target="_blank" class="action-btn">▶ YouTube</a>
+                            <button onclick="downloadImage('${item.file_url}', '${item.filename}')" class="action-btn">⬇ Download</button>
+                            <button onclick="viewImage('${item.file_url}')" class="action-btn">🔍 View</button>
                         </div>
-                        <div class="thumbnail-desc">${item.description}</div>
+                    </div>
+                    <div class="thumbnail-content">
+                        <div class="thumbnail-title">${escapeHtml(item.video_title)}</div>
+                        <div class="thumbnail-meta">
+                            <span class="meta-tag style">${escapeHtml(item.stil)}</span>
+                            <span class="meta-tag">${escapeHtml(item.rakurs)}</span>
+                        </div>
+                        <div class="thumbnail-desc">${escapeHtml(item.description)}</div>
                     </div>
                 </div>
             `).join('')}</div>`;
@@ -492,7 +589,35 @@
             document.getElementById('resultsContainer').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${msg}</p></div>`;
         }
 
-        loadStats();
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function downloadImage(url, filename) {
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                });
+        }
+
+        function viewImage(url) {
+            document.getElementById('modalImage').src = url;
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        document.getElementById('imageModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
     </script>
 </body>
 </html>
